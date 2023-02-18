@@ -95,7 +95,7 @@ VISOR:	dab		[36]			; Portas de acesso ao visor
 		clr TECST				; 5) Inicializar o teclado zerando o byte de estado (TECST, endereço 65498)
 		mov #_PULSE_TIME, TIMDT			; 6) Inicializar o timer
 
-		mov r5, _RESET_CLEAR
+		mov #_RESET_CLEAR, r5
 		jsr r7,ClearDisplay			; 7.1) Limpa o visor
 
 		clr INTS				; 1.2) Limpa pedidos de interrupção
@@ -114,15 +114,15 @@ CD_loop:
 		mov #' ',(r0)				; Preenche o visor com ' '
 		inc r0
 
-		cmp r5, _PUTCHAR_CLEAR			
-		beq check_putchar			; Se a função foi chamada na putchar(), limpa apenas 
-							; a Área Caracteres.
-		tst r0
-		bne CD_loop				; Se não, limpa todo o visor.
-		br fim_CD				; OBS: o visor está no fim da memória.
-
-check_putchar:	cmp r0, #VISOR+30
+		cmp r5, #_RESET_CLEAR			; Se a função foi chamada no reset do processador,
+		beq check_reset				; limpa todo o visor.
+						
+		cmp r0, #VISOR+30			; Se não, limpa apenas a Área Caracteres
 		bne CD_loop
+		br fim_CD
+
+check_reset:	tst r0					; OBS: o visor está no fim da memória.
+		bne CD_loop								
 			
 fim_CD:		mov #VISOR,CURSOR			; (Re)Inicializa o cursor
 		mov (r6)+, r0				; Devolve o valor de R0
@@ -216,10 +216,27 @@ getchar:
 ; void	putchar(BYTE c)
 ;------------------------------------------------------------------------------
 putchar:
-		; LIDAR COM TECLAS ESPECIAIS	
-		; Se a tecla não for especial:
 		
-		cmp r5, #' '			; Elimina caracteres que não estão
+backspace:	cmp r5, #h08			; Caractere Backspace:	
+		bne car_ret			; Faz o cursor voltar um caractere,
+		cmp CURSOR, #VISOR		; a menos que não esteja na primeira 
+		ble ret_putchar			; posição
+		dec CURSOR
+		br ret_putchar
+
+car_ret:	cmp r5, #h0D			; Caractere Carriage return:
+		bne line_feed			; Faz o cursor voltar para a
+		mov #VISOR, CURSOR		; primeira posição
+		br ret_putchar
+
+line_feed:	cmp r5, #h0A			; Caractere Line feed:
+		bne char_bounds			; Limpa o display da Área Caracteres
+		mov r5, #_PUTCHAR_CLEAR
+		jsr r7, ClearDisplay
+		mov #h0A, r5			; Restaura R5
+		br ret_putchar
+	
+char_bounds:	cmp r5, #' '			; Elimina caracteres que não estão
 		blt ret_putchar			; entre ' ' (h20) e 'z' (h7A)
 		cmp r5, #'z'
 		bgt ret_putchar
