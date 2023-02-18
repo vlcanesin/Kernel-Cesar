@@ -1,0 +1,253 @@
+;
+;
+;******************************************************************************
+;
+;	Arquivo de Referência para o desenvolvimento do kernel.
+;
+;	Versão: 2022.2
+;
+;	Áreas de memória
+;
+;	0000 - 7FFF		_KERNEL
+;					Área de Kernel para implementação dos alunos
+;
+;	0100 - 01FF		_VETTAB
+;					Tabela com os vetores das funções do kernel
+;					*** CUIDADO! Esse vetor está no meio da área de código ***
+;
+;	8000 - FF7F		_APP
+;					Área onde será colocado o programa de aplicação.
+;					Esse programa vai fazer o acesso aos periféricos e interrupções, através das funções do Kernel.
+;
+;	FF80 - FFBF 		_IOAREA16
+;					Area de perifericos, acessada na base 16 bits
+;
+;	FFC0 - FFFF		_IOAREA08
+;					Area de perifericos, acessada na base 8 bits
+;					
+;******************************************************************************
+
+
+_KERNEL:	equ	h0000
+_VETTAB:	equ	h0100
+_RESET:		equ	_VETTAB+H0100
+_STACK:		equ	h7900
+_APP:		equ	h8000
+_IOAREA16:	equ	hFF80
+_IOAREA08:	equ	hFFC0
+
+
+;
+;------------------------------------------------------------------------------
+;	Área reservada para os periféricos
+;------------------------------------------------------------------------------
+
+; Acesso em 16 bits
+		org		_IOAREA16
+		daw		[31]
+IVET:	dw		0			; Vetor de interrupção
+
+; Acesso em 8 bits
+		org		_IOAREA08
+		dab		[23]		
+TIMDT:	db		0			; Registro de programação do timer
+INTS:	db		0			; INTERRUPT STATUS: IP x x x . x x IPStec IPStim
+INTE:	db		0			; INTERRUPT ENABLE: IE x x x . x x IEStec IEStim
+TECST:	db		0			; Status do teclado
+TECDT:	db		0			; Dado do teclado
+VISOR:	dab		[36]			; Portas de acesso ao visor
+
+;	
+;------------------------------------------------------------------------------
+;	Ponto de entrada do RESET do processador
+;------------------------------------------------------------------------------
+		org		_KERNEL
+		jmp		_RESET
+
+;
+;------------------------------------------------------------------------------
+;	Area do kernel com os vetores das funções do kernel
+;------------------------------------------------------------------------------
+		org		_VETTAB
+		
+		dw		kbhit			; WORD	kbhit()
+		dw		getchar			; BYTE	getchar()
+		dw		putchar			; void	putchar(BYTE c)
+		dw		putmsg			; void	putmsg(BYTE *msg)
+		dw		timer			; void	timer(WORD tempo, WORD callback)
+		dw		volume			; WORD	volume()
+
+		
+;	
+;------------------------------------------------------------------------------
+;	Código de RESET (BOOT) do processador/interrupção
+;------------------------------------------------------------------------------
+		org		_RESET
+
+		clr INTE				; 1.1) Desabilitar o sistema de interrupções
+	
+		mov #_STACK, R6				; 2) Inicializar o stack pointer (SP = R6)
+
+		mov #isr, IVET				; 3) Inicializar as variáveis internas usadas pelo sistema de interrupções e periféricos (IVET, INTE, etc.)
+							
+		clr TEC_BUFFER				; 4) Inicializar as variáveis internas do kernel
+
+		clr TECST				; 5) Inicializar o teclado zerando o byte de estado (TECST, endereço 65498)
+		mov #_PULSE_TIME, TIMDT			; 6) Inicializar o timer
+
+		mov r5, _RESET_CLEAR
+		jsr r7,ClearDisplay			; 7.1) Limpa o visor
+
+		clr INTS				; 1.2) Limpa pedidos de interrupção
+		mov #h83, INTE 				; 8) Habilitar interrupções (tanto de teclado como de timer)
+		
+		jmp		_APP			; 9) Retornar para o programa de aplicação com um desvio para o endereço _APP da memória
+
+;		
+;------------------------------------------------------------------------------
+; void ClearDisplay(WORD modo)
+;------------------------------------------------------------------------------
+ClearDisplay:
+		mov r0, -(r6)				; Salva valor de R0
+		mov #VISOR, r0				; OBS: ClearDisplay também é usada pela putchar()
+CD_loop:
+		mov #' ',(r0)				; Preenche o visor com ' '
+		inc r0
+
+		cmp r5, _PUTCHAR_CLEAR			
+		beq check_putchar			; Se a função foi chamada na putchar(), limpa apenas 
+							; a Área Caracteres.
+		tst r0
+		bne CD_loop				; Se não, limpa todo o visor.
+		br fim_CD				; OBS: o visor está no fim da memória.
+
+check_putchar:	cmp r0, #VISOR+30
+		bne CD_loop
+			
+fim_CD:		mov #VISOR,CURSOR			; (Re)Inicializa o cursor
+		mov (r6)+, r0				; Devolve o valor de R0
+		
+		rts 		r7
+
+;		
+;------------------------------------------------------------------------------
+; Interrupt Service Routine (ISR)
+;------------------------------------------------------------------------------
+isr:
+		mov		r0,-(r6)	; Salva registradores
+		mov		r1,-(r6)
+		mov		r2,-(r6)
+		mov		r3,-(r6)
+		mov		r4,-(r6)
+		mov		r5,-(r6)
+
+check_tec:	mov INTS, r1	
+		and #2, r1			; Verifica se há interrupção de teclado
+		beq check_tim
+		jsr r7, isr_tec
+		and #hFFFD,INTS			; Desliga o bit de interrupção do teclado
+
+check_tim:	mov INTS, r1	
+		and #1, r1			; Verifica se há interrupção de timer
+		beq return_isr
+		jsr r7, isr_tim	
+		and #hFFFE,INTS			; Desliga o bit de interrupção do timer
+
+return_isr:	mov		(r6)+,r5	; Retorna os registradores da pilha
+		mov		(r6)+,r4
+		mov		(r6)+,r3
+		mov		(r6)+,r2
+		mov		(r6)+,r1
+		mov		(r6)+,r0
+
+		rti		
+
+
+; ----- Rotina de interrupção do TECLADO ----- ;
+
+isr_tec:
+		tst TECST
+		beq ret_isr_tec
+	
+		; LIDAR COM TECLAS ESPECIAIS	
+		; Se a tecla não for especial:
+
+		mov TECDT, r1			; Lida com a informação em 8 bits
+		mov r1, TEC_BUFFER		; Salva a tecla digitada no buffer
+ 
+clr_tec:	clr TECST			; Libera a leitura de novas teclas
+
+ret_isr_tec:	rts 		r7
+
+
+; ----- Rotina de interrupção do TIMER ----- ;
+
+isr_tim:
+		rts 		r7
+
+;		
+;------------------------------------------------------------------------------
+; WORD	kbhit()
+;------------------------------------------------------------------------------
+kbhit:
+		clr r0
+		tst TEC_BUFFER
+		bne return_kbhit		; Se há algo no buffer, retorna 0 por R0
+		inc r0                      	; Se não, retorna 1 por R0
+
+return_kbhit:	rts		r7
+
+;		
+;------------------------------------------------------------------------------
+; BYTE	getchar()
+;------------------------------------------------------------------------------
+getchar:
+		jsr r7, kbhit
+		tst r0
+		bne getchar			; Espera até que uma tecla entre no buffer
+
+		mov TEC_BUFFER, r0		; Salva a tecla do buffer em R0
+		clr TEC_BUFFER			; Limpa o buffer
+		
+		rts		r7
+
+;		
+;------------------------------------------------------------------------------
+; void	putchar(BYTE c)
+;------------------------------------------------------------------------------
+putchar:
+		rts		r7
+
+;		
+;------------------------------------------------------------------------------
+; void	putmsg(BYTE *msg)
+;------------------------------------------------------------------------------
+putmsg:
+		rts		r7
+
+;		
+;------------------------------------------------------------------------------
+; void	timer(WORD tempo, WORD callback)
+;------------------------------------------------------------------------------
+timer:
+		rts		r7
+				
+;		
+;------------------------------------------------------------------------------
+; WORD	volume()
+;------------------------------------------------------------------------------
+volume:
+		rts		r7
+
+;	
+;------------------------------------------------------------------------------
+;	 Constantes e variáveis (no final do programa do kernel)
+;------------------------------------------------------------------------------
+
+_PULSE_TIME: 	equ	10		; Tamanho do pulso de interrupção do timer
+
+_RESET_CLEAR:	equ	0		; Modos de operação da função ClearDisplay
+_PUTCHAR_CLEAR: equ	1		
+
+CURSOR:		dw	0		; Indica a posição do cursor da tela
+TEC_BUFFER:	dw	0		; Guarda a última tecla digitada pelo teclado

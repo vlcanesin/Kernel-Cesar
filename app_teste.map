@@ -1,0 +1,7 @@
+Símbolo         Valor Decimal   Valor Hexadecimal
+-------         -------------   -----------------
+_VETTAB                   256                 100
+_KBHIT                      0                   0
+_GETCHAR                    2                   2
+_PUTCHAR                    4                   4
+MAIN                        0                   0
