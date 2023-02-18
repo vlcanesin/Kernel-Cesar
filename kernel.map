@@ -30,11 +30,12 @@ KBHIT                     686                 2AE
 RETURN_KBHIT              696                 2B8
 GETCHAR                   697                 2B9
 PUTCHAR                   714                 2CA
-PUTMSG                    715                 2CB
-TIMER                     716                 2CC
-VOLUME                    717                 2CD
+RET_PUTCHAR               748                 2EC
+PUTMSG                    749                 2ED
+TIMER                     750                 2EE
+VOLUME                    751                 2EF
 _PULSE_TIME                10                   A
 _RESET_CLEAR                0                   0
 _PUTCHAR_CLEAR              1                   1
-CURSOR                    718                 2CE
-TEC_BUFFER                720                 2D0
+CURSOR                    752                 2F0
+TEC_BUFFER                754                 2F2

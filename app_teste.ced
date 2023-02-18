@@ -10,8 +10,8 @@ main:
 		mov #_getchar, r1
 		jsr r7, (_VETTAB(r1))		; Espera e lê tecla digitada
 
-;		mov r0, r5
-;		mov #_putchar, r1
-;		jsr r7, (_VETTAB(r1))		; Coloca tecla no visor
+		mov r0, r5
+		mov #_putchar, r1
+		jsr r7, (_VETTAB(r1))		; Coloca tecla no visor
 
-		HLT				; Fim
+		br main

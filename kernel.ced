@@ -216,7 +216,26 @@ getchar:
 ; void	putchar(BYTE c)
 ;------------------------------------------------------------------------------
 putchar:
-		rts		r7
+		; LIDAR COM TECLAS ESPECIAIS	
+		; Se a tecla não for especial:
+		
+		cmp r5, #' '			; Elimina caracteres que não estão
+		blt ret_putchar			; entre ' ' (h20) e 'z' (h7A)
+		cmp r5, #'z'
+		bgt ret_putchar
+
+		cmp CURSOR, #VISOR+30		; Verifica se cursor está em
+		beq ret_putchar 		; uma posição válida
+	
+		mov r0, -(r6)			; Salva R0 na pilha
+		
+		mov CURSOR, r0
+		mov r5, (r0)			; Move o caractere para o cursor
+		inc CURSOR			; somente se há espaço
+		
+		mov (r6)+, r0			; Retira R0 da pilha
+	
+ret_putchar:	rts		r7
 
 ;		
 ;------------------------------------------------------------------------------
