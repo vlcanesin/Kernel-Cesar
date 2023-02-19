@@ -131,6 +131,14 @@ ret_CD:		mov (r6)+, r0				; Devolve o valor de R0
 
 ;		
 ;------------------------------------------------------------------------------
+; void DisplayVolume()
+;------------------------------------------------------------------------------
+
+DisplayVolume:
+		rts 		r7
+
+;		
+;------------------------------------------------------------------------------
 ; Interrupt Service Routine (ISR)
 ;------------------------------------------------------------------------------
 isr:
@@ -163,24 +171,67 @@ return_isr:	mov		(r6)+,r5	; Retorna os registradores da pilha
 		rti		
 
 
-; ----- Rotina de interrupção do TECLADO ----- ;
+; ***** Rotina de interrupção do TECLADO ***** ;
 
 isr_tec:
 		tst TECST
-		beq ret_isr_tec
-	
-		; LIDAR COM TECLAS ESPECIAIS	
-		; Se a tecla não for especial:
+		beq ponte_isr_tec
 
-		mov TECDT, r1			; Lida com a informação em 8 bits
+mais_1:		cmp TECDT, #'+'			; Caractere '+':
+		bne menos_1			; Aumenta o volume em 1
+		add #1, VOLUME_AMP		; OBS: caracteres especiais NÃO são
+		br atualiza_vol			; salvos no buffer
+
+menos_1:	cmp TECDT, #'-'			; Caractere '-':
+		bne mais_10			; Diminui o volume em 1
+		sub #1, VOLUME_AMP			
+		br atualiza_vol	
+
+mais_10:	cmp TECDT, #'.'			; Caractere '.':
+		bne menos_10			; Aumenta o volume em 10
+		add #10, VOLUME_AMP			
+		br atualiza_vol		
+
+menos_10:	cmp TECDT, #','			; Caractere ',':
+		bne mais_100			; Diminui o volume em 10
+		sub #10, VOLUME_AMP			
+		br atualiza_vol
+
+mais_100:	cmp TECDT, #'>'			; Caractere '>':
+		bne menos_100			; Aumenta o volume em 100
+		add #100, VOLUME_AMP			
+		br atualiza_vol		
+
+menos_100:	cmp TECDT, #'<'			; Caractere '<':
+		bne salva_buffer		; Diminui o volume em 100
+		sub #100, VOLUME_AMP			
+		br atualiza_vol	
+
+		; ----- SALVA BUFFER ----- ;
+
+salva_buffer:	mov TECDT, r1			; Lida com a informação em 8 bits
 		mov r1, TEC_BUFFER		; Salva a tecla digitada no buffer
- 
+		br clr_tec			; Não é necessário atualizar o volume
+
+ponte_isr_tec:  br ret_isr_tec			; Ponte colocada devido ao tamanho da subrotina
+
+		; ------------------------ ;
+
+atualiza_vol:	tst VOLUME_AMP			
+		bge volume_max
+		mov #0, VOLUME_AMP		; Se volume for negativo, recebe 0
+volume_max:	cmp VOLUME_AMP, #1000
+		blt display_vol
+		mov #999, VOLUME_AMP		; Se volume passar de 1000, recebe 999
+
+display_vol:	jsr r7, DisplayVolume		; Se o volume foi alterado, é mostrado no visor
+
 clr_tec:	clr TECST			; Libera a leitura de novas teclas
 
 ret_isr_tec:	rts 		r7
 
 
-; ----- Rotina de interrupção do TIMER ----- ;
+; ***** Rotina de interrupção do TIMER ***** ;
 
 isr_tim:
 		rts 		r7
@@ -289,6 +340,7 @@ timer:
 ; WORD	volume()
 ;------------------------------------------------------------------------------
 volume:
+		mov VOLUME_AMP, r0		; Devolve o volume por R0
 		rts		r7
 
 ;	
@@ -303,3 +355,4 @@ _PUTCHAR_CLEAR: equ	1
 
 CURSOR:		dw	0		; Indica a posição do cursor da tela
 TEC_BUFFER:	dw	0		; Guarda a última tecla digitada pelo teclado
+VOLUME_AMP:	dw	0		; Guarda o volume do "amplificador"

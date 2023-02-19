@@ -5,6 +5,8 @@ _KBHIT                      0                   0
 _GETCHAR                    2                   2
 _PUTCHAR                    4                   4
 _PUTMSG                     6                   6
+_TIMER                      8                   8
+_VOLUME                    10                   A
 STRING                    256                 100
-FIM_STRING                278                 116
+FIM_STRING                277                 115
 MAIN                        0                   0

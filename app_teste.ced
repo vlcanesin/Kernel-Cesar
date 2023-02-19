@@ -4,16 +4,20 @@ _kbhit:		equ	0
 _getchar:	equ	2
 _putchar:	equ	4
 _putmsg:	equ	6
+_timer:		equ 	8
+_volume:	equ	10
 
 
 		org h0100
 
-STRING:		dab 	'Executado pela putchar'
+STRING:		dab 	'Executado pela putMSG'
 FIM_STRING:	db 	0
 
 		org 0
 
 main:
+		; ----- app1: putchar / getchar ----- ;
+
 ;		mov #_getchar, r1
 ;		jsr r7, (_VETTAB(r1))		; Espera e lê tecla digitada
 
@@ -21,11 +25,18 @@ main:
 ;		mov #_putchar, r1
 ;		jsr r7, (_VETTAB(r1))		; Coloca tecla no visor
 
-;		br main
+		
+		; -----       app2: putmsg      ----- ;
 
+;		mov #h8100, r5			; Pega o endereço da string (mudar para modo RELATIVO)
+;		mov #_putmsg, r1
+;		jsr r7, (_VETTAB(r1))
 
-		mov #h8100, r5		; Pega o endereço da string (mudar para modo RELATIVO)
-		mov #_putmsg, r1
+		
+		; -----       app2: volume      ----- ;
+
+		mov #_volume, r1
 		jsr r7, (_VETTAB(r1))
 
-		HLT
+		br main
+;		HLT
