@@ -4,4 +4,7 @@ _VETTAB                   256                 100
 _KBHIT                      0                   0
 _GETCHAR                    2                   2
 _PUTCHAR                    4                   4
+_PUTMSG                     6                   6
+STRING                    256                 100
+FIM_STRING                278                 116
 MAIN                        0                   0

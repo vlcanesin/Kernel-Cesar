@@ -1,1 +1,5 @@
 1- "Caracteres enviados quando a Área Caracteres estiver cheia (o cursor saiu da área útil) deverão ser ignorados". Mesmo os caracteres especiais devem ser ignorados?
+
+2- O caractere "line feed" (limpa o visor) também move o cursor para o início do visor?
+
+3- Como usar o modo relativo para acessar variáveis na aplicação

@@ -3,15 +3,29 @@ _VETTAB:	equ	h0100
 _kbhit:		equ	0
 _getchar:	equ	2
 _putchar:	equ	4
+_putmsg:	equ	6
+
+
+		org h0100
+
+STRING:		dab 	'Executado pela putchar'
+FIM_STRING:	db 	0
 
 		org 0
 
 main:
-		mov #_getchar, r1
-		jsr r7, (_VETTAB(r1))		; Espera e lê tecla digitada
+;		mov #_getchar, r1
+;		jsr r7, (_VETTAB(r1))		; Espera e lê tecla digitada
 
-		mov r0, r5
-		mov #_putchar, r1
-		jsr r7, (_VETTAB(r1))		; Coloca tecla no visor
+;		mov r0, r5
+;		mov #_putchar, r1
+;		jsr r7, (_VETTAB(r1))		; Coloca tecla no visor
 
-		br main
+;		br main
+
+
+		mov #h8100, r5		; Pega o endereço da string (mudar para modo RELATIVO)
+		mov #_putmsg, r1
+		jsr r7, (_VETTAB(r1))
+
+		HLT

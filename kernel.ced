@@ -97,6 +97,7 @@ VISOR:	dab		[36]			; Portas de acesso ao visor
 
 		mov #_RESET_CLEAR, r5
 		jsr r7,ClearDisplay			; 7.1) Limpa o visor
+		mov #VISOR,CURSOR			; 7.2) Inicializa o cursor
 
 		clr INTS				; 1.2) Limpa pedidos de interrupção
 		mov #h83, INTE 				; 8) Habilitar interrupções (tanto de teclado como de timer)
@@ -119,13 +120,12 @@ CD_loop:
 						
 		cmp r0, #VISOR+30			; Se não, limpa apenas a Área Caracteres
 		bne CD_loop
-		br fim_CD
+		br ret_CD
 
 check_reset:	tst r0					; OBS: o visor está no fim da memória.
 		bne CD_loop								
-			
-fim_CD:		mov #VISOR,CURSOR			; (Re)Inicializa o cursor
-		mov (r6)+, r0				; Devolve o valor de R0
+		
+ret_CD:		mov (r6)+, r0				; Devolve o valor de R0
 		
 		rts 		r7
 
@@ -231,7 +231,7 @@ car_ret:	cmp r5, #h0D			; Caractere Carriage return:
 
 line_feed:	cmp r5, #h0A			; Caractere Line feed:
 		bne char_bounds			; Limpa o display da Área Caracteres
-		mov r5, #_PUTCHAR_CLEAR
+		mov r5, #_PUTCHAR_CLEAR		; SEM REINICIALIZAR O CURSOR!
 		jsr r7, ClearDisplay
 		mov #h0A, r5			; Restaura R5
 		br ret_putchar
@@ -259,6 +259,22 @@ ret_putchar:	rts		r7
 ; void	putmsg(BYTE *msg)
 ;------------------------------------------------------------------------------
 putmsg:
+		mov r0, -(r6)			; Salva o registradores na pilha
+		mov r5, -(r6)			
+
+		mov r5, r0			; R0 recebe o endereço de início da string
+
+loop_msg:	dec r0				; OBS: assumindo que a string está na área de dados,
+		mov (r0)+, r5			; ela é lida com operações de 2 bytes
+		and #h00FF, r5 			; O byte de cada caractere é colocado em R5
+
+		beq ret_putmsg			; Se o caractere for '\0', o fim da string foi atingido
+		jsr r7, putchar			; Se não, coloca o caractere no cursor
+		br loop_msg
+
+ret_putmsg:	mov (r6)+, r5 			; Devolve valores originais dos registradores
+		mov (r6)+, r0		
+	
 		rts		r7
 
 ;		
