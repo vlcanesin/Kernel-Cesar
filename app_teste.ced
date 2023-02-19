@@ -36,7 +36,7 @@ main:
 		; -----       app2: volume      ----- ;
 
 		mov #_volume, r1
-		jsr r7, (_VETTAB(r1))
+		jsr r7, (_VETTAB(r1))		; Coloca o volume em R0 (por motivos desconhecidos)
 
 		br main
 ;		HLT

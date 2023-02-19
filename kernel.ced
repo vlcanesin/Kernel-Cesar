@@ -91,13 +91,20 @@ VISOR:	dab		[36]			; Portas de acesso ao visor
 		mov #isr, IVET				; 3) Inicializar as variáveis internas usadas pelo sistema de interrupções e periféricos (IVET, INTE, etc.)
 							
 		clr TEC_BUFFER				; 4) Inicializar as variáveis internas do kernel
-
+		clr VOLUME_AMP
+		
+		mov #VISOR,CURSOR
+		
+		mov #100, TAB_DEZ
+		mov #10, TAB_DEZ+2
+		mov #1, TAB_DEZ+4
+	
 		clr TECST				; 5) Inicializar o teclado zerando o byte de estado (TECST, endereço 65498)
 		mov #_PULSE_TIME, TIMDT			; 6) Inicializar o timer
 
 		mov #_RESET_CLEAR, r5
 		jsr r7,ClearDisplay			; 7.1) Limpa o visor
-		mov #VISOR,CURSOR			; 7.2) Inicializa o cursor
+		jsr r7, DisplayVolume			; 7.2) Coloca VOLUME_AMP (000) no visor
 
 		clr INTS				; 1.2) Limpa pedidos de interrupção
 		mov #h83, INTE 				; 8) Habilitar interrupções (tanto de teclado como de timer)
@@ -135,6 +142,40 @@ ret_CD:		mov (r6)+, r0				; Devolve o valor de R0
 ;------------------------------------------------------------------------------
 
 DisplayVolume:
+		mov r0, -(r6)				; Salva registradores na pilha		
+		mov r1, -(r6)
+		mov r2, -(r6)
+		mov r3, -(r6)
+
+		mov #HFFFD, r0				; R0 possui a antepenúltima posição do visor
+		mov VOLUME_AMP, r1			; R1 possui o valor do volume
+		clr r2					; R2 receberá o caractere da posição (R0)
+		clr r3					; R3 é um ponteiro para o vetor {100, 10, 1}
+
+		; ----- Encontra dígitos (centenas > dezenas > unidades) ----- ;
+
+sub_fator:	cmp r1, TAB_DEZ(r3)
+		blt print_fator
+		sub TAB_DEZ(r3), r1			; É contado quantos {100, 10, 1}s cabem no número
+		inc r2					; (ou seja, o dígito da centena/dezena/unidade)
+		br sub_fator
+
+print_fator:	add #'0', r2				; R2 é convertido em um dígito
+		mov r2, (r0)				; e é colocado no visor
+
+		inc r0					; Posição do visor é incrementada para a próxima casa
+		clr r2					; Contador é zerado
+		add #2, r3				; Ponteiro aponta para próxima posição no vetor
+		cmp r3, #6
+		bne sub_fator
+
+		; ------------------------------------------------------------ ;
+
+		mov (r6)+, r3
+		mov (r6)+, r2
+		mov (r6)+, r1
+		mov (r6)+, r0				; Devolve os valores originais dos regs.
+
 		rts 		r7
 
 ;		
@@ -142,12 +183,12 @@ DisplayVolume:
 ; Interrupt Service Routine (ISR)
 ;------------------------------------------------------------------------------
 isr:
-		mov		r0,-(r6)	; Salva registradores
-		mov		r1,-(r6)
-		mov		r2,-(r6)
-		mov		r3,-(r6)
-		mov		r4,-(r6)
-		mov		r5,-(r6)
+		mov r0, -(r6)			; Salva registradores
+		mov r1, -(r6)
+		mov r2, -(r6)
+		mov r3, -(r6)
+		mov r4, -(r6)
+		mov r5, -(r6) 
 
 check_tec:	mov INTS, r1	
 		and #2, r1			; Verifica se há interrupção de teclado
@@ -161,12 +202,12 @@ check_tim:	mov INTS, r1
 		jsr r7, isr_tim	
 		and #hFFFE,INTS			; Desliga o bit de interrupção do timer
 
-return_isr:	mov		(r6)+,r5	; Retorna os registradores da pilha
-		mov		(r6)+,r4
-		mov		(r6)+,r3
-		mov		(r6)+,r2
-		mov		(r6)+,r1
-		mov		(r6)+,r0
+return_isr:	mov (r6)+, r5			; Retorna os registradores da pilha
+		mov (r6)+, r4
+		mov (r6)+, r3
+		mov (r6)+, r2
+		mov (r6)+, r1
+		mov (r6)+, r0
 
 		rti		
 
@@ -356,3 +397,4 @@ _PUTCHAR_CLEAR: equ	1
 CURSOR:		dw	0		; Indica a posição do cursor da tela
 TEC_BUFFER:	dw	0		; Guarda a última tecla digitada pelo teclado
 VOLUME_AMP:	dw	0		; Guarda o volume do "amplificador"
+TAB_DEZ:	daw	100, 10, 1	; Fatores utilizados para separar dígitos do volume
