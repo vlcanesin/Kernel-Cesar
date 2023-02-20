@@ -92,6 +92,7 @@ VISOR:	dab		[36]			; Portas de acesso ao visor
 							
 		clr TEC_BUFFER				; 4) Inicializar as variáveis internas do kernel
 		clr VOLUME_AMP
+		clr TICK_ENABLE
 		
 		mov #VISOR,CURSOR
 		
@@ -275,7 +276,17 @@ ret_isr_tec:	rts 		r7
 ; ***** Rotina de interrupção do TIMER ***** ;
 
 isr_tim:
-		rts 		r7
+		tst TICK_ENABLE	
+		beq ret_isr_tim			; Se TICK não estiver habilitado, não faz nada
+
+		sub #_PULSE_TIME, TICK		; Passaram _PULSE_TIME ms desde a última interrupção
+		bgt ret_isr_tim			; Se TICK ainda for positivo, não faz nada
+
+		mov CALLBACK, r1
+		jsr r7, (r1)			; Se não, pula para a função de CALLBACK
+		clr TICK_ENABLE			; TICK é desbilitado
+	
+ret_isr_tim:	rts 		r7
 
 ;		
 ;------------------------------------------------------------------------------
@@ -373,7 +384,11 @@ ret_putmsg:	mov (r6)+, r5 			; Devolve valores originais dos registradores
 ;------------------------------------------------------------------------------
 ; void	timer(WORD tempo, WORD callback)
 ;------------------------------------------------------------------------------
-timer:
+timer:	
+		mov r5, TICK			; TICK recebe temporização
+		mov r4, CALLBACK		; CALLBACK recebe o endereço de retorno
+		inc TICK_ENABLE			; Contagem de tempo é habilitada
+
 		rts		r7
 				
 ;		
@@ -398,3 +413,7 @@ CURSOR:		dw	0		; Indica a posição do cursor da tela
 TEC_BUFFER:	dw	0		; Guarda a última tecla digitada pelo teclado
 VOLUME_AMP:	dw	0		; Guarda o volume do "amplificador"
 TAB_DEZ:	daw	100, 10, 1	; Fatores utilizados para separar dígitos do volume
+
+TICK:		dw	0		; Variável usada para guardar o tempo de timer()
+TICK_ENABLE:	dw	0		; Enable da contagem do tick (ativado em timer())
+CALLBACK:	dw	0		; Endereço de retorno da função timer()

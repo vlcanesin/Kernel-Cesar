@@ -6,16 +6,20 @@ _putchar:	equ	4
 _putmsg:	equ	6
 _timer:		equ 	8
 _volume:	equ	10
+		
 
-
-		org h0100
-
-STRING:		dab 	'Executado pela putMSG'
-FIM_STRING:	db 	0
+		
+;------------------------------------------------------------------------------
+; 				Programa Principal
+;------------------------------------------------------------------------------
 
 		org 0
 
+		mov r7, r2			
+		sub #2, r2			; R2 possui o endereço do início do programa
+
 main:
+
 		; ----- app1: putchar / getchar ----- ;
 
 ;		mov #_getchar, r1
@@ -28,15 +32,76 @@ main:
 		
 		; -----       app2: putmsg      ----- ;
 
-;		mov #h8100, r5			; Pega o endereço da string (mudar para modo RELATIVO)
+;		mov #STRING, r5			
+;		add r2, r5			; Pega o endereço da string
 ;		mov #_putmsg, r1
 ;		jsr r7, (_VETTAB(r1))
 
 		
-		; -----       app2: volume      ----- ;
+		; -----       app3: volume      ----- ;
 
-		mov #_volume, r1
-		jsr r7, (_VETTAB(r1))		; Coloca o volume em R0 (por motivos desconhecidos)
+;		mov #_volume, r1
+;		jsr r7, (_VETTAB(r1))		; Coloca o volume em R0 (por motivos desconhecidos)
 
-		br main
-;		HLT
+
+		; -----       app4: timer       ----- ;
+
+		mov #MSG_INICIAL, r5			
+		add r2, r5			
+		mov #_putmsg, r1
+		jsr r7, (_VETTAB(r1))
+
+		mov #2000, r5			; 2000 ms (2 segundos de delay)
+		mov #PrintTimStr, r4
+		add r2, r4			; R4 tem o endereço da função PrintTimStr
+		mov #_timer, r1
+		jsr r7, (_VETTAB(r1))		; Seta o timer
+
+		mov #_getchar, r1		; Aguarda o usuário apertar uma tecla
+		jsr r7, (_VETTAB(r1))		
+
+		
+		; ********  FIM DO PROGRAMA  ******** ;
+
+		br main				; Opção 1: loop
+;		HLT				; Opção 2: HLT
+
+		
+;------------------------------------------------------------------------------
+; 				Área de Dados
+;------------------------------------------------------------------------------
+
+		org h0100
+
+PrintTimStr:	
+		mov #TIM_STRING, r5			
+		add r2, r5
+		mov #_putmsg, r1
+		jsr r7, (_VETTAB(r1))
+	
+		rts r7
+
+STRING:		dab	'Print feito pela putMSG passando do limite'
+		db	0
+
+MSG_INICIAL:	db	h0A 						; Limpa visor
+		db	h0D						; Coloca o cursor na primeira posição
+		dab	'Digite uma tecla para encerrar o programa'	; String intencionalmente maior
+		db	0						; do que a Área Caracteres
+
+TIM_STRING:	db	h0A 			; Limpa visor
+		db	h0D			; Coloca o cursor na primeira posição
+		dab 	'Fim do timer!'
+		db 	0
+
+
+
+
+
+
+
+
+
+
+
+

@@ -7,6 +7,8 @@ _PUTCHAR                    4                   4
 _PUTMSG                     6                   6
 _TIMER                      8                   8
 _VOLUME                    10                   A
-STRING                    256                 100
-FIM_STRING                277                 115
-MAIN                        0                   0
+MAIN                        6                   6
+PRINTTIMSTR               256                 100
+STRING                    271                 10F
+MSG_INICIAL               314                 13A
+TIM_STRING                358                 166
