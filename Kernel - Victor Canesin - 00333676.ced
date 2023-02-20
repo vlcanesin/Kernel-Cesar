@@ -86,7 +86,7 @@ VISOR:	dab		[36]			; Portas de acesso ao visor
 ;------------------------------------------------------------------------------
 		org		_RESET
 
-		clr INTE			; 1.1) Desabilitar o sistema de interrupções
+		clr INTE			; 1) Desabilitar o sistema de interrupções
 	
 		mov #_STACK, R6			; 2) Inicializar o stack pointer (SP = R6)
 
