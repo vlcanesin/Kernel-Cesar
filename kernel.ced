@@ -2,18 +2,20 @@
 ;
 ;******************************************************************************
 ;
-;	Arquivo de Referência para o desenvolvimento do kernel.
+;	* Arq. I (2022/2), Trabalho 2: Kernel para aplicações do Cesar
 ;
-;	Versão: 2022.2
+;	Nome: 		Víctor Lucas Rosada Canesin	
+;	Matrícula: 	00333676
+;
+;	--------------------------------------------------------------
 ;
 ;	Áreas de memória
 ;
 ;	0000 - 7FFF		_KERNEL
-;					Área de Kernel para implementação dos alunos
+;					Área de Kernel
 ;
 ;	0100 - 01FF		_VETTAB
 ;					Tabela com os vetores das funções do kernel
-;					*** CUIDADO! Esse vetor está no meio da área de código ***
 ;
 ;	8000 - FF7F		_APP
 ;					Área onde será colocado o programa de aplicação.
@@ -70,12 +72,12 @@ VISOR:	dab		[36]			; Portas de acesso ao visor
 ;------------------------------------------------------------------------------
 		org		_VETTAB
 		
-		dw		kbhit			; WORD	kbhit()
-		dw		getchar			; BYTE	getchar()
-		dw		putchar			; void	putchar(BYTE c)
-		dw		putmsg			; void	putmsg(BYTE *msg)
-		dw		timer			; void	timer(WORD tempo, WORD callback)
-		dw		volume			; WORD	volume()
+		dw		kbhit		; WORD	kbhit()
+		dw		getchar		; BYTE	getchar()
+		dw		putchar		; void	putchar(BYTE c)
+		dw		putmsg		; void	putmsg(BYTE *msg)
+		dw		timer		; void	timer(WORD tempo, WORD callback)
+		dw		volume		; WORD	volume()
 
 		
 ;	
@@ -84,13 +86,14 @@ VISOR:	dab		[36]			; Portas de acesso ao visor
 ;------------------------------------------------------------------------------
 		org		_RESET
 
-		clr INTE				; 1.1) Desabilitar o sistema de interrupções
+		clr INTE			; 1.1) Desabilitar o sistema de interrupções
 	
-		mov #_STACK, R6				; 2) Inicializar o stack pointer (SP = R6)
+		mov #_STACK, R6			; 2) Inicializar o stack pointer (SP = R6)
 
-		mov #isr, IVET				; 3) Inicializar as variáveis internas usadas pelo sistema de interrupções e periféricos (IVET, INTE, etc.)
-							
-		clr TEC_BUFFER				; 4) Inicializar as variáveis internas do kernel
+		mov #isr, IVET			; 3.1) Coloca o endereço da subrotina de interrupção em IVET
+		clr INTS			; 3.2) Limpa pedidos de interrupção				
+			
+		clr TEC_BUFFER			; 4) Inicializar as variáveis internas do kernel
 		clr VOLUME_AMP
 		clr TICK_ENABLE
 		
@@ -100,40 +103,39 @@ VISOR:	dab		[36]			; Portas de acesso ao visor
 		mov #10, TAB_DEZ+2
 		mov #1, TAB_DEZ+4
 	
-		clr TECST				; 5) Inicializar o teclado zerando o byte de estado (TECST, endereço 65498)
-		mov #_PULSE_TIME, TIMDT			; 6) Inicializar o timer
+		clr TECST			; 5) Inicializar o teclado zerando o byte de estado (TECST)
+		mov #_PULSE_TIME, TIMDT		; 6) Inicializar o timer
 
 		mov #_RESET_CLEAR, r5
-		jsr r7,ClearDisplay			; 7.1) Limpa o visor
-		jsr r7, DisplayVolume			; 7.2) Coloca VOLUME_AMP (000) no visor
+		jsr r7,ClearDisplay		; 7.1) Limpa o visor
+		jsr r7, DisplayVolume		; 7.2) Coloca VOLUME_AMP (000) no visor
 
-		clr INTS				; 1.2) Limpa pedidos de interrupção
-		mov #h83, INTE 				; 8) Habilitar interrupções (tanto de teclado como de timer)
+		mov #h83, INTE 			; 8) Habilitar interrupções (tanto de teclado como de timer)
 		
-		jmp		_APP			; 9) Retornar para o programa de aplicação com um desvio para o endereço _APP da memória
+		jmp		_APP		; 9) Retornar para o programa de aplicação com um desvio para o endereço _APP da memória
 
 ;		
 ;------------------------------------------------------------------------------
 ; void ClearDisplay(WORD modo)
 ;------------------------------------------------------------------------------
 ClearDisplay:
-		mov r0, -(r6)				; Salva valor de R0
-		mov #VISOR, r0				; OBS: ClearDisplay também é usada pela putchar()
+		mov r0, -(r6)			; Salva valor de R0
+		mov #VISOR, r0			; OBS: ClearDisplay também é usada pela putchar()
 CD_loop:
-		mov #' ',(r0)				; Preenche o visor com ' '
+		mov #' ',(r0)			; Preenche o visor com ' '
 		inc r0
 
-		cmp r5, #_RESET_CLEAR			; Se a função foi chamada no reset do processador,
-		beq check_reset				; limpa todo o visor.
+		cmp r5, #_RESET_CLEAR		; Se a função foi chamada no reset do processador,
+		beq check_reset			; limpa todo o visor.
 						
-		cmp r0, #VISOR+30			; Se não, limpa apenas a Área Caracteres
+		cmp r0, #VISOR+30		; Se não, limpa apenas a Área Caracteres
 		bne CD_loop
 		br ret_CD
 
-check_reset:	tst r0					; OBS: o visor está no fim da memória.
+check_reset:	tst r0				; OBS: o visor está no fim da memória.
 		bne CD_loop								
 		
-ret_CD:		mov (r6)+, r0				; Devolve o valor de R0
+ret_CD:		mov (r6)+, r0			; Devolve o valor de R0
 		
 		rts 		r7
 
@@ -143,30 +145,30 @@ ret_CD:		mov (r6)+, r0				; Devolve o valor de R0
 ;------------------------------------------------------------------------------
 
 DisplayVolume:
-		mov r0, -(r6)				; Salva registradores na pilha		
+		mov r0, -(r6)			; Salva registradores na pilha		
 		mov r1, -(r6)
 		mov r2, -(r6)
 		mov r3, -(r6)
 
-		mov #HFFFD, r0				; R0 possui a antepenúltima posição do visor
-		mov VOLUME_AMP, r1			; R1 possui o valor do volume
-		clr r2					; R2 receberá o caractere da posição (R0)
-		clr r3					; R3 é um ponteiro para o vetor {100, 10, 1}
+		mov #HFFFD, r0			; R0 possui a antepenúltima posição do visor
+		mov VOLUME_AMP, r1		; R1 possui o valor do volume
+		clr r2				; R2 receberá o caractere da posição (R0)
+		clr r3				; R3 é um ponteiro para o vetor {100, 10, 1}
 
 		; ----- Encontra dígitos (centenas > dezenas > unidades) ----- ;
 
 sub_fator:	cmp r1, TAB_DEZ(r3)
 		blt print_fator
-		sub TAB_DEZ(r3), r1			; É contado quantos {100, 10, 1}s cabem no número
-		inc r2					; (ou seja, o dígito da centena/dezena/unidade)
+		sub TAB_DEZ(r3), r1		; É contado quantos {100, 10, 1}s cabem no número
+		inc r2				; (ou seja, o dígito da centena/dezena/unidade)
 		br sub_fator
 
-print_fator:	add #'0', r2				; R2 é convertido em um dígito
-		mov r2, (r0)				; e é colocado no visor
+print_fator:	add #'0', r2			; R2 é convertido em um dígito
+		mov r2, (r0)			; e é colocado no visor
 
-		inc r0					; Posição do visor é incrementada para a próxima casa
-		clr r2					; Contador é zerado
-		add #2, r3				; Ponteiro aponta para próxima posição no vetor
+		inc r0				; Posição do visor é incrementada para a próxima casa
+		clr r2				; Contador é zerado
+		add #2, r3			; Ponteiro aponta para próxima posição no vetor
 		cmp r3, #6
 		bne sub_fator
 
@@ -175,7 +177,7 @@ print_fator:	add #'0', r2				; R2 é convertido em um dígito
 		mov (r6)+, r3
 		mov (r6)+, r2
 		mov (r6)+, r1
-		mov (r6)+, r0				; Devolve os valores originais dos regs.
+		mov (r6)+, r0			; Devolve os valores originais dos regs.
 
 		rts 		r7
 
@@ -417,3 +419,4 @@ TAB_DEZ:	daw	100, 10, 1	; Fatores utilizados para separar dígitos do volume
 TICK:		dw	0		; Variável usada para guardar o tempo de timer()
 TICK_ENABLE:	dw	0		; Enable da contagem do tick (ativado em timer())
 CALLBACK:	dw	0		; Endereço de retorno da função timer()
+	

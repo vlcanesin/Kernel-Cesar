@@ -63,8 +63,8 @@ main:
 		
 		; ********  FIM DO PROGRAMA  ******** ;
 
-		br main				; Opção 1: loop
-;		HLT				; Opção 2: HLT
+;		br main				; Opção 1: loop
+		HLT				; Opção 2: HLT
 
 		
 ;------------------------------------------------------------------------------
