@@ -406,7 +406,7 @@ volume:
 ;	 Constantes e variáveis (no final do programa do kernel)
 ;------------------------------------------------------------------------------
 
-_PULSE_TIME: 	equ	10		; Tamanho do pulso de interrupção do timer
+_PULSE_TIME: 	equ	1		; Tamanho do pulso de interrupção do timer
 
 _RESET_CLEAR:	equ	0		; Modos de operação da função ClearDisplay
 _PUTCHAR_CLEAR: equ	1		
