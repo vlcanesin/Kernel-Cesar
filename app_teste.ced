@@ -13,7 +13,7 @@ _volume:	equ	10
 ; 				Programa Principal
 ;------------------------------------------------------------------------------
 
-		org 0
+		org 32768
 
 		mov r7, r2			
 		sub #2, r2			; R2 possui o endereço do início do programa
@@ -32,10 +32,10 @@ main:
 		
 		; -----       app2: putmsg      ----- ;
 
-;		mov #STRING, r5			
-;		add r2, r5			; Pega o endereço da string
-;		mov #_putmsg, r1
-;		jsr r7, (_VETTAB(r1))
+		mov #STRING, r5			
+		;add r2, r5			; Pega o endereço da string
+		mov #_putmsg, r1
+		jsr r7, (_VETTAB(r1))
 
 		
 		; -----       app3: volume      ----- ;
@@ -46,19 +46,19 @@ main:
 
 		; -----       app4: timer       ----- ;
 
-		mov #MSG_INICIAL, r5			
-		add r2, r5			
-		mov #_putmsg, r1
-		jsr r7, (_VETTAB(r1))
+;		mov #MSG_INICIAL, r5			
+;		add r2, r5			
+;		mov #_putmsg, r1
+;		jsr r7, (_VETTAB(r1))
 
-		mov #2000, r5			; 2000 ms (2 segundos de delay)
-		mov #PrintTimStr, r4
-		add r2, r4			; R4 tem o endereço da função PrintTimStr
-		mov #_timer, r1
-		jsr r7, (_VETTAB(r1))		; Seta o timer
+;		mov #2000, r5			; 2000 ms (2 segundos de delay)
+;		mov #PrintTimStr, r4
+;		add r2, r4			; R4 tem o endereço da função PrintTimStr
+;		mov #_timer, r1
+;		jsr r7, (_VETTAB(r1))		; Seta o timer
 
-		mov #_getchar, r1		; Aguarda o usuário apertar uma tecla
-		jsr r7, (_VETTAB(r1))		
+;		mov #_getchar, r1		; Aguarda o usuário apertar uma tecla
+;		jsr r7, (_VETTAB(r1))		
 
 		
 		; ********  FIM DO PROGRAMA  ******** ;
@@ -71,7 +71,7 @@ main:
 ; 				Área de Dados
 ;------------------------------------------------------------------------------
 
-		org h0100
+		org 37768
 
 PrintTimStr:	
 		mov #TIM_STRING, r5			
