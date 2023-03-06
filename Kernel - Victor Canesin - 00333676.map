@@ -55,7 +55,7 @@ LOOP_MSG                 1056                 420
 RET_PUTMSG               1072                 430
 TIMER                    1077                 435
 VOLUME                   1090                 442
-_PULSE_TIME                 1                   1
+_PULSE_TIME                10                   A
 _RESET_CLEAR                0                   0
 _PUTCHAR_CLEAR              1                   1
 CURSOR                   1095                 447
